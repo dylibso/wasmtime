@@ -1092,7 +1092,8 @@ impl<T> Linker<T> {
         module: &Module,
     ) -> Result<Instance> {
         let adapter = &mut store.as_context_mut().0.inner.adapter;
-        let trace_ctx = adapter.start(self, &module.data)?; // TODO(dylibso): store trace_ctx somewhere
+        let trace_ctx = adapter.start(self, &module.data)?;
+        store.as_context_mut().0.inner.trace_ctx = Some(trace_ctx);
         self._instantiate_pre(module, Some(store.as_context_mut().0))?
             .instantiate(store)
     }
@@ -1111,6 +1112,7 @@ impl<T> Linker<T> {
     {
         let adapter = &mut store.as_context_mut().0.inner.adapter;
         let trace_ctx = adapter.start(self, &module.data)?; // TODO(dylibso): store trace_ctx somewhere
+        store.as_context_mut().0.inner.trace_ctx = Some(trace_ctx);
         self._instantiate_pre(module, Some(store.as_context_mut().0))?
             .instantiate_async(store)
             .await
@@ -1181,7 +1183,7 @@ impl<T> Linker<T> {
     fn _instantiate_pre(
         &mut self,
         module: &Module,
-        store: Option<&StoreOpaque>,
+        store: Option<&mut StoreOpaque>,
     ) -> Result<InstancePre<T>> {
         let mut imports = module
             .imports()
@@ -1190,6 +1192,7 @@ impl<T> Linker<T> {
         if let Some(store) = store {
             let adapter = &store.adapter;
             let trace_ctx = adapter.start(self, &module.data)?; // TODO(dylibso): store trace_ctx somewhere
+            store.trace_ctx = Some(trace_ctx);
             for import in imports.iter_mut() {
                 import.update_size(store);
             }
