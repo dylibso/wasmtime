@@ -48,6 +48,10 @@ async-trait = { workspace = true, optional = true }
 encoding_rs = { version = "0.8.31", optional = true }
 bumpalo = "3.11.0"
 fxprof-processed-profile = "0.6.0"
+modsurfer-demangle = {git = "https://github.com/dylibso/modsurfer"}
+rand = "0.8.5"
+ureq = "2.7.1"
+url = "2.4.0"
 
 [target.'cfg(target_os = "windows")'.dependencies.windows-sys]
 workspace = true
@@ -61,16 +65,7 @@ wasmtime-wasi = { path = "../wasi" }
 wasi-cap-std-sync = { path = "../wasi-common/cap-std-sync" }
 
 [features]
-default = [
-  'async',
-  'cache',
-  'wat',
-  'jitdump',
-  'parallel-compilation',
-  'cranelift',
-  'pooling-allocator',
-  'vtune',
-]
+default = ['async', 'cache', 'wat', 'jitdump', 'parallel-compilation', 'cranelift', 'pooling-allocator', 'vtune']
 
 # An on-by-default feature enabling runtime compilation of WebAssembly modules
 # with the Cranelift compiler. Cranelift is the default compilation backend of
@@ -100,12 +95,7 @@ cache = ["dep:wasmtime-cache"]
 
 # Enables support for "async stores" as well as defining host functions as
 # `async fn` and calling functions asynchronously.
-async = [
-  "dep:wasmtime-fiber",
-  "wasmtime-runtime/async",
-  "dep:async-trait",
-  "wasmtime-component-macro?/async",
-]
+async = ["dep:wasmtime-fiber", "wasmtime-runtime/async", "dep:async-trait", "wasmtime-component-macro?/async"]
 
 # Enables support for the pooling instance allocation strategy
 pooling-allocator = ["wasmtime-runtime/pooling-allocator"]
@@ -113,10 +103,7 @@ pooling-allocator = ["wasmtime-runtime/pooling-allocator"]
 # Enables support for all architectures in Cranelift, allowing
 # cross-compilation using the `wasmtime` crate's API, notably the
 # `Engine::precompile_module` function.
-all-arch = [
-  "wasmtime-cranelift?/all-arch",
-  "wasmtime-winch?/all-arch",
-]
+all-arch = ["wasmtime-cranelift?/all-arch", "wasmtime-winch?/all-arch"]
 
 # Enables in-progress support for the component model. Note that this feature is
 # in-progress, buggy, and incomplete. This is primarily here for internal
@@ -131,4 +118,4 @@ component-model = [
   "dep:encoding_rs",
 ]
 
-wmemcheck = ["wasmtime-runtime/wmemcheck", "wasmtime-cranelift/wmemcheck"]
+wmemcheck = ["wasmtime-runtime/wmemcheck", "wasmtime-cranelift?/wmemcheck"]

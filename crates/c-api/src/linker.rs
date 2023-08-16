@@ -126,7 +126,7 @@ pub unsafe extern "C" fn wasmtime_linker_define_instance(
 
 #[no_mangle]
 pub extern "C" fn wasmtime_linker_instantiate(
-    linker: &wasmtime_linker_t,
+    linker: &mut wasmtime_linker_t,
     store: CStoreContextMut<'_>,
     module: &wasmtime_module_t,
     instance_ptr: &mut Instance,

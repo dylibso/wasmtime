@@ -20,7 +20,8 @@ pub struct WasiThreadsCtx<T> {
 
 impl<T: Clone + Send + 'static> WasiThreadsCtx<T> {
     pub fn new(module: Module, linker: Arc<Linker<T>>) -> Result<Self> {
-        let instance_pre = Arc::new(linker.instantiate_pre(&module)?);
+        let x = linker.instantiate_pre(&module)?;
+        let instance_pre = Arc::new(x);
         Ok(Self { instance_pre })
     }
 

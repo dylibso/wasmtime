@@ -256,7 +256,7 @@ default = [
   "wasmtime/parallel-compilation",
   "vtune",
   "wasi-nn",
-  "wasi-threads",
+  # "wasi-threads",
   "wasi-http",
   "pooling-allocator",
 ]

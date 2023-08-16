@@ -1087,10 +1087,12 @@ impl<T> Linker<T> {
     /// # }
     /// ```
     pub fn instantiate(
-        &self,
+        &mut self,
         mut store: impl AsContextMut<Data = T>,
         module: &Module,
     ) -> Result<Instance> {
+        let adapter = &mut store.as_context_mut().0.inner.adapter;
+        let trace_ctx = adapter.start(self, &module.data)?; // TODO(dylibso): store trace_ctx somewhere
         self._instantiate_pre(module, Some(store.as_context_mut().0))?
             .instantiate(store)
     }
@@ -1100,13 +1102,15 @@ impl<T> Linker<T> {
     #[cfg(feature = "async")]
     #[cfg_attr(nightlydoc, doc(cfg(feature = "async")))]
     pub async fn instantiate_async(
-        &self,
+        &mut self,
         mut store: impl AsContextMut<Data = T>,
         module: &Module,
     ) -> Result<Instance>
     where
         T: Send,
     {
+        let adapter = &mut store.as_context_mut().0.inner.adapter;
+        let trace_ctx = adapter.start(self, &module.data)?; // TODO(dylibso): store trace_ctx somewhere
         self._instantiate_pre(module, Some(store.as_context_mut().0))?
             .instantiate_async(store)
             .await
@@ -1159,7 +1163,7 @@ impl<T> Linker<T> {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn instantiate_pre(&self, module: &Module) -> Result<InstancePre<T>> {
+    pub fn instantiate_pre(&mut self, module: &Module) -> Result<InstancePre<T>> {
         self._instantiate_pre(module, None)
     }
 
@@ -1175,7 +1179,7 @@ impl<T> Linker<T> {
     /// per-store-`Linker` types are likely using `.instantiate(..)` and
     /// per-`Engine` linkers don't have memories/tables in them.
     fn _instantiate_pre(
-        &self,
+        &mut self,
         module: &Module,
         store: Option<&StoreOpaque>,
     ) -> Result<InstancePre<T>> {
@@ -1184,6 +1188,8 @@ impl<T> Linker<T> {
             .map(|import| self._get_by_import(&import))
             .collect::<Result<Vec<_>, _>>()?;
         if let Some(store) = store {
+            let adapter = &store.adapter;
+            let trace_ctx = adapter.start(self, &module.data)?; // TODO(dylibso): store trace_ctx somewhere
             for import in imports.iter_mut() {
                 import.update_size(store);
             }

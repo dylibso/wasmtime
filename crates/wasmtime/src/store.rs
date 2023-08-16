@@ -201,7 +201,7 @@ impl CallHook {
 /// should go into `StoreOpaque`.
 pub struct StoreInner<T> {
     /// Generic metadata about the store that doesn't need access to `T`.
-    inner: StoreOpaque,
+    pub(crate) inner: StoreOpaque,
 
     limiter: Option<ResourceLimiterInner<T>>,
     call_hook: Option<CallHookInner<T>>,
@@ -348,6 +348,9 @@ pub struct StoreOpaque {
     component_host_table: wasmtime_runtime::component::ResourceTable,
     #[cfg(feature = "component-model")]
     component_calls: wasmtime_runtime::component::CallContexts,
+
+    pub(crate) adapter: crate::observe::adapter::AdapterHandle,
+    pub(crate) trace_ctx: Option<crate::observe::adapter::TraceContext>,
 }
 
 #[cfg(feature = "async")]
@@ -455,8 +458,11 @@ impl<T> Store<T> {
     /// tables created to 10,000. This can be overridden with the
     /// [`Store::limiter`] configuration method.
     pub fn new(engine: &Engine, data: T) -> Self {
+        let adapter = crate::observe::adapter::stdout::StdoutAdapter::create();
         let mut inner = Box::new(StoreInner {
             inner: StoreOpaque {
+                adapter,
+                trace_ctx: None,
                 _marker: marker::PhantomPinned,
                 engine: engine.clone(),
                 runtime_limits: Default::default(),

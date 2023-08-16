@@ -34,7 +34,8 @@ pub unsafe extern "C" fn wasm_instance_new(
             None => None,
         })
         .collect::<Vec<_>>();
-    match Instance::new(store.store.context_mut(), &wasm_module.module, &imports) {
+    let instance = Instance::new(store.store.context_mut(), &wasm_module.module, &imports);
+    match instance {
         Ok(instance) => Some(Box::new(wasm_instance_t::new(
             store.store.clone(),
             instance,

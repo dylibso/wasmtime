@@ -99,6 +99,7 @@ pub use registry::{is_wasm_trap_pc, register_code, unregister_code, ModuleRegist
 #[derive(Clone)]
 pub struct Module {
     inner: Arc<ModuleInner>,
+    pub(crate) data: Vec<u8>,
 }
 
 struct ModuleInner {
@@ -330,7 +331,8 @@ impl Module {
         };
 
         let info_and_types = info_and_types.map(|(info, types)| (info, types.into()));
-        return Self::from_parts(engine, code, info_and_types);
+        let mut x = Self::from_parts(engine, code, info_and_types, binary.to_vec())?;
+        return Ok(x);
 
         fn publish_mmap(mmap: MmapVec) -> Result<Arc<CodeMemory>> {
             let mut code = CodeMemory::new(mmap)?;
@@ -365,8 +367,9 @@ impl Module {
     pub unsafe fn from_trusted_file(engine: &Engine, file: impl AsRef<Path>) -> Result<Module> {
         let mmap = MmapVec::from_file(file.as_ref())?;
         if &mmap[0..4] == b"\x7fELF" {
+            let data = mmap.to_vec();
             let code = engine.load_code(mmap, ObjectKind::Module)?;
-            return Module::from_parts(engine, code, None);
+            return Module::from_parts(engine, code, None, data);
         }
 
         Module::new(engine, &*mmap)
@@ -501,7 +504,7 @@ impl Module {
     /// future versions of wasmtime will reject old cache entries).
     pub unsafe fn deserialize(engine: &Engine, bytes: impl AsRef<[u8]>) -> Result<Module> {
         let code = engine.load_code_bytes(bytes.as_ref(), ObjectKind::Module)?;
-        Module::from_parts(engine, code, None)
+        Module::from_parts(engine, code, None, bytes.as_ref().to_vec())
     }
 
     /// Same as [`deserialize`], except that the contents of `path` are read to
@@ -529,7 +532,8 @@ impl Module {
     /// state of the file.
     pub unsafe fn deserialize_file(engine: &Engine, path: impl AsRef<Path>) -> Result<Module> {
         let code = engine.load_code_file(path.as_ref(), ObjectKind::Module)?;
-        Module::from_parts(engine, code, None)
+        let data = code.mmap().to_vec();
+        Module::from_parts(engine, code, None, data)
     }
 
     /// Entrypoint for creating a `Module` for all above functions, both
@@ -543,6 +547,7 @@ impl Module {
         engine: &Engine,
         code_memory: Arc<CodeMemory>,
         info_and_types: Option<(CompiledModuleInfo, ModuleTypes)>,
+        data: Vec<u8>,
     ) -> Result<Self> {
         // Acquire this module's metadata and type information, deserializing
         // it from the provided artifact if it wasn't otherwise provided
@@ -565,7 +570,7 @@ impl Module {
         // Package up all our data into a `CodeObject` and delegate to the final
         // step of module compilation.
         let code = Arc::new(CodeObject::new(code_memory, signatures, types.into()));
-        Module::from_parts_raw(engine, code, info, true)
+        Module::from_parts_raw(engine, code, info, true, data)
     }
 
     pub(crate) fn from_parts_raw(
@@ -573,6 +578,7 @@ impl Module {
         code: Arc<CodeObject>,
         info: CompiledModuleInfo,
         serializable: bool,
+        data: Vec<u8>,
     ) -> Result<Self> {
         let module = CompiledModule::from_artifacts(
             code.code_memory().clone(),
@@ -594,6 +600,7 @@ impl Module {
                 serializable,
                 offsets,
             }),
+            data,
         })
     }
 

@@ -108,11 +108,14 @@ impl Instance {
         imports: &[Extern],
     ) -> Result<Instance> {
         let mut store = store.as_context_mut();
-        let imports = Instance::typecheck_externs(store.0, module, imports)?;
+        let mut linker = crate::Linker::new(store.engine());
+        // TODO(dylibso): do something with `imports`
+        linker.instantiate(&mut store, module)
+        // let mut imports = Instance::typecheck_externs(store.0, module, &imports)?;
         // Note that the unsafety here should be satisfied by the call to
         // `typecheck_externs` above which satisfies the condition that all
         // the imports are valid for this module.
-        unsafe { Instance::new_started(&mut store, module, imports.as_ref()) }
+        // unsafe { Instance::new_started(&mut store, module, imports.as_ref()) }
     }
 
     /// Same as [`Instance::new`], except for usage in [asynchronous stores].
@@ -816,6 +819,8 @@ fn pre_instantiate_raw(
     host_funcs: usize,
     func_refs: &Arc<[VMFuncRef]>,
 ) -> Result<OwnedImports> {
+    // let adapter = &mut store.adapter;
+    // let trace_ctx = adapter.start(self, &module.data)?; // TODO(dylibso): store trace_ctx somewhere
     if host_funcs > 0 {
         // Any linker-defined function of the `Definition::HostFunc` variant
         // will insert a function into the store automatically as part of

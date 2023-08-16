@@ -263,7 +263,15 @@ impl Component {
         // `types` type information, and the code memory to a runtime object.
         let static_modules = static_modules
             .into_iter()
-            .map(|(_, info)| Module::from_parts_raw(engine, code.clone(), info, false))
+            .map(|(_, info)| {
+                Module::from_parts_raw(
+                    engine,
+                    code.clone(),
+                    info,
+                    false,
+                    code.code_memory().mmap().to_vec(),
+                )
+            })
             .collect::<Result<_>>()?;
 
         Ok(Component {
