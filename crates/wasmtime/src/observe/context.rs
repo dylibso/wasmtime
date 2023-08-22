@@ -498,15 +498,12 @@ pub fn add_to_linker<T>(linker: &mut Linker<T>, data: &[u8]) -> Result<EventChan
     Ok((events_tx, events_rx))
 }
 
-pub fn make_exports<T>(
-    store: &mut crate::StoreContextMut<T>,
-    imports: &mut Vec<crate::Extern>,
-    module: &crate::Module,
-) -> Result<EventChannel> {
+/// Link observability import functions required by instrumented wasm code
+pub fn create<T>(, data: &[u8]) -> Result<EventChannel> {
     let (ctx, events_tx, events_rx) = InstrumentationContext::new();
 
     // load the static wasm-instr info
-    let wasm_instr_info = WasmInstrInfo::new(&module.data)?;
+    let wasm_instr_info = WasmInstrInfo::new(data)?;
 
     // check that the version number is supported with this SDK
     // TODO decide what to do about this error?
@@ -515,25 +512,22 @@ pub fn make_exports<T>(
     }
 
     let t = FuncType::new([ValType::I32], []);
-    let enter_ctx = ctx.clone();
 
-    unsafe {
-        imports.push(crate::Extern::Func(crate::Func::new(
-            store,
-            // MODULE_NAME,
-            // "instrument_enter",
-            t.clone(),
-            move |_caller: Caller<T>, params, results| {
-                instrument_enter(
-                    params,
-                    results,
-                    enter_ctx.clone(),
-                    &wasm_instr_info.function_names,
-                )
-            },
-        )));
-    }
-    /*
+    let enter_ctx = ctx.clone();
+    linker.func_new(
+        MODULE_NAME,
+        "instrument_enter",
+        t.clone(),
+        move |_caller: Caller<T>, params, results| {
+            instrument_enter(
+                params,
+                results,
+                enter_ctx.clone(),
+                &wasm_instr_info.function_names,
+            )
+        },
+    )?;
+
     let exit_ctx = ctx.clone();
     linker.func_new(
         MODULE_NAME,
@@ -602,6 +596,6 @@ pub fn make_exports<T>(
     // if the wasm was automatically instrumented using Dylibso's compiler, there will be some
     // metadata added to enforce compatibility with the SDK. This metadata is stored as a module
     // global export, which by default can cause wasmtime to return an error during instantiation.
-    linker.allow_unknown_exports(true);*/
+    linker.allow_unknown_exports(true);
     Ok((events_tx, events_rx))
 }

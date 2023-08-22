@@ -1,4 +1,4 @@
-use crate::linker::{Definition, DefinitionType};
+use crate::linker::{self, Definition, DefinitionType};
 use crate::store::{InstanceId, StoreOpaque, Stored};
 use crate::types::matching;
 use crate::{
@@ -8,6 +8,7 @@ use crate::{
 use anyhow::{anyhow, bail, Context, Result};
 use std::mem;
 use std::ptr::NonNull;
+use std::rc::Rc;
 use std::sync::Arc;
 use wasmtime_environ::{EntityType, FuncIndex, GlobalIndex, MemoryIndex, PrimaryMap, TableIndex};
 use wasmtime_runtime::{
@@ -108,14 +109,16 @@ impl Instance {
         imports: &[Extern],
     ) -> Result<Instance> {
         let mut store = store.as_context_mut();
+        let imports = Instance::typecheck_externs(store.0, module, &imports)?;
+        let inst0 = unsafe { Instance::new_started(&mut store, module, imports.as_ref())? };
         let mut linker = crate::Linker::new(store.engine());
+        linker.instance(&mut store, "env", inst0)?;
         // TODO(dylibso): do something with `imports`
+
         linker.instantiate(&mut store, module)
-        // let mut imports = Instance::typecheck_externs(store.0, module, &imports)?;
         // Note that the unsafety here should be satisfied by the call to
         // `typecheck_externs` above which satisfies the condition that all
         // the imports are valid for this module.
-        // unsafe { Instance::new_started(&mut store, module, imports.as_ref()) }
     }
 
     /// Same as [`Instance::new`], except for usage in [asynchronous stores].
@@ -765,10 +768,20 @@ impl<T> InstancePre<T> {
             &self.func_refs,
         )?;
 
+        // TODO(dylibso): imports
+
+        let inst0 = unsafe { Instance::new_started(&mut store, &self.module, imports.as_ref())? };
+        let mut linker = crate::Linker::new(&store.engine());
+        linker.allow_shadowing(true);
+        let trace_ctx = store.0.adapter.start(&mut linker, &self.module.data)?;
+        linker.instance(&mut store, "", inst0)?;
+        let instance = linker.instantiate(&mut store.0, &self.module)?;
+        store.0.trace_ctx = Some(trace_ctx);
+
         // This unsafety should be handled by the type-checking performed by the
         // constructor of `InstancePre` to assert that all the imports we're passing
         // in match the module we're instantiating.
-        unsafe { Instance::new_started(&mut store, &self.module, imports.as_ref()) }
+        Ok(instance)
     }
 
     /// Creates a new instance, running the start function asynchronously

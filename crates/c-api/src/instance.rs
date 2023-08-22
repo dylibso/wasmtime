@@ -34,7 +34,16 @@ pub unsafe extern "C" fn wasm_instance_new(
             None => None,
         })
         .collect::<Vec<_>>();
-    let instance = Instance::new(store.store.context_mut(), &wasm_module.module, &imports);
+    let mut linker = wasmtime::Linker::new(store.store.context().engine());
+
+    for import in imports {
+        // linker.define_name(store.store.context_mut(), , , )
+        // TODO(dylibso): what to do with the imports?
+    }
+
+    wasmtime::observe::context::add_to_linker(&mut linker, &wasm_module.module.data).unwrap();
+
+    let instance = linker.instantiate(store.store.context_mut(), &wasm_module.module);
     match instance {
         Ok(instance) => Some(Box::new(wasm_instance_t::new(
             store.store.clone(),

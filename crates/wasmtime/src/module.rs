@@ -99,7 +99,7 @@ pub use registry::{is_wasm_trap_pc, register_code, unregister_code, ModuleRegist
 #[derive(Clone)]
 pub struct Module {
     inner: Arc<ModuleInner>,
-    pub(crate) data: Vec<u8>,
+    pub data: Vec<u8>,
 }
 
 struct ModuleInner {

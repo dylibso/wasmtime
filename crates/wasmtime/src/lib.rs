@@ -403,7 +403,7 @@ mod limits;
 mod linker;
 mod memory;
 mod module;
-pub(crate) mod observe;
+pub mod observe;
 mod profiling;
 mod r#ref;
 mod resources;

@@ -1076,6 +1076,10 @@ impl Func {
         }
         values_vec.truncate(0);
         store.0.save_wasm_val_raw_storage(values_vec);
+
+        if let Some(ctx) = store.0.trace_ctx.take() {
+            ctx.shutdown();
+        }
         Ok(())
     }
 
